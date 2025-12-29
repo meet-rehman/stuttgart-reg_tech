@@ -436,7 +436,7 @@ async def root():
     """Root endpoint - serve interactive UX"""
     static_file = Path(__file__).parent / "static" / "index.html"
     if static_file.exists():
-        return static_file.read_text()
+        return HTMLResponse(content=static_file.read_text())
     else:
         # Fallback to basic HTML if static file not found
         return HTMLResponse(content="""
