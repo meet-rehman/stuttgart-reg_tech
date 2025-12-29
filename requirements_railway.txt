@@ -1,0 +1,25 @@
+# Core web framework (compatible versions)
+fastapi==0.104.1
+uvicorn==0.24.0
+python-multipart==0.0.6
+
+# AI libraries
+openai==1.40.0
+pydantic==2.8.0
+requests==2.31.0
+python-dotenv==1.0.0
+httpx==0.25.2
+typing-extensions>=4.8.0
+Pillow>=10.0.0
+
+# CrewAI Multi-agent framework
+crewai==0.41.1
+
+# LangChain ecosystem (compatible versions from PakClimate)
+langchain==0.2.16
+langchain-openai==0.1.25
+langchain-community==0.2.16
+langchain-core==0.2.40
+
+# Additional utilities
+numpy==1.26.2
