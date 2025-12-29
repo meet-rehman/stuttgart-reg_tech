@@ -439,7 +439,7 @@ async def root():
         return static_file.read_text()
     else:
         # Fallback to basic HTML if static file not found
-    return HTMLResponse(content="""
+        return HTMLResponse(content="""
 <!DOCTYPE html>
 <html>
 <head>
