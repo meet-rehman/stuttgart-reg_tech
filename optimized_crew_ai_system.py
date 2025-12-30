@@ -401,6 +401,13 @@ Based on {plans[0].name}:
         3. Avoid long queries like "building regulations for residential in Stuttgart with height requirements"
         4. Extract EXACT numbers from results - never use generic ranges or typical values
         5. If you don't find exact values after multiple searches, state that clearly
+        6. **CRITICAL: Distinguish elevation from building height:**
+       - "m ü. NN" or "HBA XXX" = Plot ELEVATION above sea level (topographic reference)
+       - "Höhe max" or "maximale Gebäudehöhe" = Actual BUILDING HEIGHT limit
+       - Example: "HBA 283.25 m ü. NN" means plot elevation is 283.25m above sea level
+       - This is NOT the maximum building height!
+       - Always search separately for actual height restrictions
+
         **WHY THIS WORKS:**
         -  ✅  Search "HBA"  →  Finds "HBA 283.25" (good match)
         -  ❌  Search "maximum building height for residential area"  →  Poor match
@@ -477,13 +484,69 @@ Based on {plans[0].name}:
             "legal_analyst": legal_analyst,
         }
     
+
+    def classify_query_type(self, query: RegulationQuery) -> str:
+        """
+        Classify query into types:
+        - 'site_specific': Requires consultation report (plot/building analysis)
+        - 'definition': Simple definition/explanation
+        - 'process': Administrative process question
+        - 'general': General information
+        """
+        query_lower = query.query.lower()
+        
+        # Site-specific indicators
+        site_keywords = [
+            'build', 'plot', 'grundstück', 'flurstück', 
+            'can i', 'möchte bauen', 'planning to build',
+            'development', 'projekt', 'single family',
+            'einfamilienhaus', 'wohngebäude', 'storeys',
+            'geschosse', 'height', 'höhe', 'area', 'fläche',
+            'permit for', 'genehmigung für'
+        ]
+        
+        # Definition indicators
+        definition_keywords = [
+            'what is', 'was ist', 'define', 'definition',
+            'bedeutung', 'explain', 'erklären', 'difference between',
+            'unterschied zwischen', 'meaning of'
+        ]
+        
+        # Process indicators
+        process_keywords = [
+            'how to', 'wie kann ich', 'steps', 'schritte',
+            'process', 'verfahren', 'register', 'anmelden',
+            'apply', 'beantragen', 'submit', 'einreichen',
+            'procedure', 'ablauf'
+        ]
+        
+        # General information indicators
+        general_keywords = [
+            'tell me about', 'erzähl mir über',
+            'overview', 'überblick', 'history', 'geschichte',
+            'climate', 'klima', 'statistics', 'statistik'
+        ]
+        
+        # Check query type (order matters - more specific first)
+        if query.plot_number or any(kw in query_lower for kw in site_keywords):
+            return 'site_specific'
+        elif any(kw in query_lower for kw in definition_keywords):
+            return 'definition'
+        elif any(kw in query_lower for kw in process_keywords):
+            return 'process'
+        elif any(kw in query_lower for kw in general_keywords):
+            return 'general'
+        else:
+            # Default: if unclear, treat as site-specific to be safe
+            return 'site_specific'
+
     # ========================================================================
     # CORE EXECUTION METHOD (Must be indented inside the class)
     # ========================================================================
 
     def execute_analysis(self, query: RegulationQuery) -> Dict[str, Any]:
         """
-        Execute multi-agent analysis with optimizations
+        Execute multi-agent analysis with query-type-aware routing
         """
         start_time = time.time()
         
@@ -501,6 +564,32 @@ Based on {plans[0].name}:
         logger.info(f"🎯 Starting analysis for: {query.query}")
         
         self.metrics['total_queries'] += 1
+        
+        # =====================================================================
+        # NEW: CLASSIFY QUERY TYPE
+        # =====================================================================
+        
+        query_type = self.classify_query_type(query)
+        print(f"🔍 Query Type: {query_type.upper()}")
+        
+        # =====================================================================
+        # ROUTE BASED ON QUERY TYPE
+        # =====================================================================
+        
+        if query_type == 'definition':
+            return self._handle_definition_query(query, start_time)
+        
+        elif query_type == 'process':
+            return self._handle_process_query(query, start_time)
+        
+        elif query_type == 'general':
+            return self._handle_general_query(query, start_time)
+        
+        # =====================================================================
+        # SITE-SPECIFIC QUERIES (Original Logic)
+        # =====================================================================
+        
+        print("🏗️ SITE-SPECIFIC MODE: Full consultation report")
         
         # Detect plot-specific query
         is_plot_query = query.plot_number is not None or any(
@@ -741,8 +830,12 @@ Based on {plans[0].name}:
         - **GFZ (Geschossflächenzahl):** [EXACT value from research, e.g., "1.2"]
         → Meaning: Total buildable floor area = [GFZ × plot area]. For 1000m² plot = [GFZ × 1000]m² total
 
-        - **Building Height:** [EXACT value from research, e.g., "HBA 283.25 m ü. NN"]
-        → Meaning: [Convert to stories if possible, e.g., "Approximately 3-4 stories"]
+        - **Plot Elevation:** [If HBA found, e.g., "HBA 283.25 m ü. NN (elevation above sea level)"]
+        → Meaning: This is the topographic reference, NOT a height restriction
+
+        - **Building Height Limit:** [If "Höhe max" found, e.g., "12 meters" or "3 stories"]
+        → Meaning: Maximum allowed building height above ground level
+        → [If not found: "Height limit not specified in available documents - confirm with building department"]
 
         - **Setbacks:** [From research if available, otherwise state "To be confirmed with building department"]
 
@@ -1012,8 +1105,268 @@ Based on {plans[0].name}:
                 'timestamp': datetime.now().isoformat()
             }
             
-        
+    # ========================================================================
+    # QUERY CLASSIFICATION & ROUTING
+    # ========================================================================
     
+    def classify_query_type(self, query: RegulationQuery) -> str:
+        """
+        Classify query into types:
+        - 'site_specific': Requires consultation report (plot/building analysis)
+        - 'definition': Simple definition/explanation
+        - 'process': Administrative process question
+        - 'general': General information
+        """
+        query_lower = query.query.lower()
+        
+        # Site-specific indicators
+        site_keywords = [
+            'build', 'plot', 'grundstück', 'flurstück', 
+            'can i', 'möchte bauen', 'planning to build',
+            'development', 'projekt', 'single family',
+            'einfamilienhaus', 'wohngebäude', 'storeys',
+            'geschosse', 'height', 'höhe', 'area', 'fläche',
+            'permit for', 'genehmigung für', '3 storey',
+            '12m high', 'total area', 'residential building'
+        ]
+        
+        # Definition indicators
+        definition_keywords = [
+            'what is', 'was ist', 'define', 'definition',
+            'bedeutung', 'explain', 'erklären', 'difference between',
+            'unterschied zwischen', 'meaning of', 'what does', 'was bedeutet'
+        ]
+        
+        # Process indicators
+        process_keywords = [
+            'how to', 'wie kann ich', 'steps', 'schritte',
+            'process', 'verfahren', 'register', 'anmelden',
+            'apply', 'beantragen', 'submit', 'einreichen',
+            'procedure', 'ablauf', 'how do i'
+        ]
+        
+        # General information indicators
+        general_keywords = [
+            'tell me about', 'erzähl mir über',
+            'overview', 'überblick', 'history', 'geschichte',
+            'climate', 'klima', 'statistics', 'statistik'
+        ]
+        
+        # Check query type (order matters - more specific first)
+        if query.plot_number or any(kw in query_lower for kw in site_keywords):
+            return 'site_specific'
+        elif any(kw in query_lower for kw in definition_keywords):
+            return 'definition'
+        elif any(kw in query_lower for kw in process_keywords):
+            return 'process'
+        elif any(kw in query_lower for kw in general_keywords):
+            return 'general'
+        else:
+            # Default: if unclear, treat as site-specific to be safe
+            return 'site_specific'
+    
+    def _handle_definition_query(self, query: RegulationQuery, start_time: float) -> Dict[str, Any]:
+        """Handle simple definition/explanation queries"""
+        
+        print("📚 DEFINITION MODE: Using Document Specialist only")
+        
+        # Simple task for Document Specialist
+        definition_task = Task(
+            description=f"""Answer this definition/explanation question:
+            "{query.query}"
+            
+            Search the documents and provide a clear, concise explanation (200-400 words).
+            Include relevant citations and examples.
+            
+            Format your answer as:
+            **[Term/Concept]**
+            
+            [Clear explanation in 2-3 paragraphs]
+            
+            **Example:**
+            [Practical example if relevant]
+            
+            **Legal Reference:**
+            [Cite specific laws/regulations: BauGB, BauNVO, LBO BW]
+            
+            Do NOT create a full consultation report - just answer the question directly.
+            """,
+            agent=self.agents["document_specialist"],
+            expected_output="Clear explanation with citations (200-400 words)"
+        )
+        
+        # Single agent crew
+        crew = Crew(
+            agents=[self.agents["document_specialist"]],
+            tasks=[definition_task],
+            process=Process.sequential,
+            verbose=True
+        )
+        
+        try:
+            print("⏳ Processing definition query...")
+            result = crew.kickoff()
+            elapsed = time.time() - start_time
+            
+            # Extract answer
+            answer = result.tasks_output[-1].raw if hasattr(result, 'tasks_output') else str(result)
+            
+            print(f"✅ Definition query complete in {elapsed:.2f}s")
+            
+            return {
+                'success': True,
+                'analysis': answer,
+                'processing_time': elapsed,
+                'query_type': 'definition',
+                'timestamp': datetime.now().isoformat(),
+                'metrics': self._get_query_metrics()
+            }
+        
+        except Exception as e:
+            elapsed = time.time() - start_time
+            logger.error(f"❌ Definition query error: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'analysis': f"Error processing definition query: {str(e)}",
+                'processing_time': elapsed,
+                'timestamp': datetime.now().isoformat()
+            }
+
+    def _handle_process_query(self, query: RegulationQuery, start_time: float) -> Dict[str, Any]:
+        """Handle administrative process questions"""
+        
+        print("📋 PROCESS MODE: Using Document Specialist for procedure guidance")
+        
+        # Research process
+        process_task = Task(
+            description=f"""Find information about this administrative process:
+            "{query.query}"
+            
+            Search for and provide:
+            
+            **Required Steps:**
+            [List the sequential steps clearly]
+            
+            **Required Documents:**
+            [List all necessary documents]
+            
+            **Responsible Authorities:**
+            [Which offices to contact]
+            
+            **Timeline:**
+            [Expected processing time]
+            
+            **Relevant Regulations:**
+            [Cite applicable laws]
+            
+            **Contact Information:**
+            [If available in documents]
+            
+            Provide clear, actionable information (400-600 words).
+            Do NOT create a full consultation report - focus on the process.
+            """,
+            agent=self.agents["document_specialist"],
+            expected_output="Process information with steps and requirements (400-600 words)"
+        )
+        
+        crew = Crew(
+            agents=[self.agents["document_specialist"]],
+            tasks=[process_task],
+            process=Process.sequential,
+            verbose=True
+        )
+        
+        try:
+            print("⏳ Processing procedure query...")
+            result = crew.kickoff()
+            elapsed = time.time() - start_time
+            
+            answer = result.tasks_output[-1].raw if hasattr(result, 'tasks_output') else str(result)
+            
+            print(f"✅ Process query complete in {elapsed:.2f}s")
+            
+            return {
+                'success': True,
+                'analysis': answer,
+                'processing_time': elapsed,
+                'query_type': 'process',
+                'timestamp': datetime.now().isoformat(),
+                'metrics': self._get_query_metrics()
+            }
+        
+        except Exception as e:
+            elapsed = time.time() - start_time
+            logger.error(f"❌ Process query error: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'analysis': f"Error processing procedure query: {str(e)}",
+                'processing_time': elapsed,
+                'timestamp': datetime.now().isoformat()
+            }
+
+    def _handle_general_query(self, query: RegulationQuery, start_time: float) -> Dict[str, Any]:
+        """Handle general information queries"""
+        
+        print("ℹ️ GENERAL MODE: Using Document Specialist for information")
+        
+        general_task = Task(
+            description=f"""Provide information about:
+            "{query.query}"
+            
+            Search the documents and provide a comprehensive overview (400-700 words).
+            
+            Include:
+            - Key facts and context
+            - Relevant statistics (if available)
+            - Historical background (if relevant)
+            - Current situation
+            - References to source documents
+            
+            Structure your response clearly with sections if needed.
+            """,
+            agent=self.agents["document_specialist"],
+            expected_output="Comprehensive information with context (400-700 words)"
+        )
+        
+        crew = Crew(
+            agents=[self.agents["document_specialist"]],
+            tasks=[general_task],
+            process=Process.sequential,
+            verbose=True
+        )
+        
+        try:
+            print("⏳ Processing general information query...")
+            result = crew.kickoff()
+            elapsed = time.time() - start_time
+            
+            answer = result.tasks_output[-1].raw if hasattr(result, 'tasks_output') else str(result)
+            
+            print(f"✅ General query complete in {elapsed:.2f}s")
+            
+            return {
+                'success': True,
+                'analysis': answer,
+                'processing_time': elapsed,
+                'query_type': 'general',
+                'timestamp': datetime.now().isoformat(),
+                'metrics': self._get_query_metrics()
+            }
+        
+        except Exception as e:
+            elapsed = time.time() - start_time
+            logger.error(f"❌ General query error: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'analysis': f"Error processing general query: {str(e)}",
+                'processing_time': elapsed,
+                'timestamp': datetime.now().isoformat()
+            }        
+
+
     # ========================================================================
     # METRICS & MONITORING
     # ========================================================================
