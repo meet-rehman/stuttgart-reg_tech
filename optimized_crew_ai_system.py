@@ -383,37 +383,53 @@ Based on {plans[0].name}:
             role="Document & Visual Plan Specialist",
             goal="Find EXACT numerical values from building regulations using multiple targeted searches, and analyze site plans visually with legend knowledge",
             backstory="""Expert at searching German building regulation documents and reading architectural plans. Can identify plots, extract zoning information, and measure distances from visual plans. 
-        
-        **VISION CAPABILITIES:**
-        - Can identify plots in visual Bebauungspläne
-        - Has access to extracted legend knowledge (WA/MI/GE zones, colors, symbols)
-        - Interprets zoning colors: red=residential, yellow=commercial, green=parks
-        - Recognizes standard abbreviations: GRZ, GFZ, HBA, EFH
+            
+            **VISION CAPABILITIES:**
+            - Can identify plots in visual Bebauungspläne
+            - Has access to extracted legend knowledge (WA/MI/GE zones, colors, symbols)
+            - Interprets zoning colors: red=residential, yellow=commercial, green=parks
+            - Recognizes standard abbreviations: GRZ, GFZ, HBA, EFH
 
-        **CRITICAL SEARCH TECHNIQUE:**
-        You know that German building plans store technical values as simple labels:
-        - HBA 283.25 (building height)
-        - GRZ 0.4 (plot coverage ratio) 
-        - EFH 261.50 (floor elevation)
-        **YOUR PROVEN STRATEGY (Always follow this):**
-        1. Make MULTIPLE separate searches (5-7 searches), NOT one complex query
-        2. Use SHORT queries (2-4 words): "Stgt 272", "HBA", "GRZ", "GFZ"
-        3. Avoid long queries like "building regulations for residential in Stuttgart with height requirements"
-        4. Extract EXACT numbers from results - never use generic ranges or typical values
-        5. If you don't find exact values after multiple searches, state that clearly
-        6. **CRITICAL: Distinguish elevation from building height:**
-       - "m ü. NN" or "HBA XXX" = Plot ELEVATION above sea level (topographic reference)
-       - "Höhe max" or "maximale Gebäudehöhe" = Actual BUILDING HEIGHT limit
-       - Example: "HBA 283.25 m ü. NN" means plot elevation is 283.25m above sea level
-       - This is NOT the maximum building height!
-       - Always search separately for actual height restrictions
+            **CRITICAL SEARCH TECHNIQUE:**
+            You know that German building plans store technical values as simple labels:
+            - HBA 283.25 (building height)
+            - GRZ 0.4 (plot coverage ratio) 
+            - EFH 261.50 (floor elevation)
+            
+            **YOUR PROVEN STRATEGY (Always follow this):**
+            1. Make MULTIPLE separate searches (5-7 searches), NOT one complex query
+            2. ALWAYS include project type in GRZ/GFZ/height searches
+            3. Example GOOD searches:
+            - "GRZ [project type]" → e.g., "GRZ single family house", "GRZ Einfamilienhaus"
+            - "GFZ Wohngebiet" → for residential projects
+            - "[project type] zoning WA" → to find zone type
+            - "Stgt 272" → for plan-specific search
+            4. Example BAD searches:
+            - "GRZ" alone → Will find WRONG building types!
+            - "building regulations" → Too generic
+            5. Extract EXACT numbers from results - never use generic ranges
+            6. VALIDATE zone type matches project type:
+            - Single family house → Should find WA (Wohngebiet), GRZ 0.3-0.6
+            - Mixed-use → Should find MI (Mischgebiet), GRZ 0.4-0.6
+            - Commercial → Should find GE (Gewerbegebiet), GRZ 0.6-0.8
+            - REJECT results from wrong building types!
+            7. If you don't find exact values after multiple searches, state that clearly
+            8. **CRITICAL: Distinguish elevation from building height:**
+            - "m ü. NN" or "HBA XXX" = Plot ELEVATION above sea level (topographic reference)
+            - "Höhe max" or "maximale Gebäudehöhe" = Actual BUILDING HEIGHT limit
+            - Example: "HBA 283.25 m ü. NN" means plot elevation is 283.25m above sea level
+            - This is NOT the maximum building height!
+            - Always search separately for actual height restrictions
 
-        **WHY THIS WORKS:**
-        -  ✅  Search "HBA"  →  Finds "HBA 283.25" (good match)
-        -  ❌  Search "maximum building height for residential area"  →  Poor match
-        You understand that technical documents need technical search terms.
-        You never give generic German building code knowledge - only specific values you actually find.
-        You know when to use vision tools vs text search based on the query type.""",
+            **WHY THIS WORKS:**
+            - ✅ Search "GRZ single family house" → Finds residential GRZ 0.4 (correct)
+            - ❌ Search "GRZ" alone → Finds commercial GRZ 0.8 (wrong for residential!)
+            - ✅ Search "HBA" → Finds "HBA 283.25" (good match)
+            
+            You understand that technical documents need technical search terms WITH PROJECT CONTEXT.
+            You never give generic German building code knowledge - only specific values you actually find.
+            You ALWAYS validate that found values match the project type before reporting them.
+            You know when to use vision tools vs text search based on the query type.""",
             llm=self.vision_llm,
             verbose=True,
             tools=[
@@ -423,7 +439,7 @@ Based on {plans[0].name}:
                 tools['plot_analysis']
             ],
             allow_delegation=False,
-            max_iter=20   # Increased iteration limit
+            max_iter=20
         )
 
         #Agent 2: architecture_consultant_agent
