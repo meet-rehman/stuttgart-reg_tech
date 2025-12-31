@@ -400,36 +400,55 @@ Based on {plans[0].name}:
             1. Make MULTIPLE separate searches (5-7 searches), NOT one complex query
             2. ALWAYS include project type in GRZ/GFZ/height searches
             3. Example GOOD searches:
-            - "GRZ [project type]" → e.g., "GRZ single family house", "GRZ Einfamilienhaus"
-            - "GFZ Wohngebiet" → for residential projects
-            - "[project type] zoning WA" → to find zone type
-            - "Stgt 272" → for plan-specific search
+            - "GRZ single family house" or "GRZ Einfamilienhaus"
+            - "GFZ Wohngebiet WA"
+            - "residential zoning Stuttgart"
             4. Example BAD searches:
             - "GRZ" alone → Will find WRONG building types!
-            - "building regulations" → Too generic
-            5. Extract EXACT numbers from results - never use generic ranges
-            6. VALIDATE zone type matches project type:
-            - Single family house → Should find WA (Wohngebiet), GRZ 0.3-0.6
-            - Mixed-use → Should find MI (Mischgebiet), GRZ 0.4-0.6
-            - Commercial → Should find GE (Gewerbegebiet), GRZ 0.6-0.8
-            - REJECT results from wrong building types!
-            7. If you don't find exact values after multiple searches, state that clearly
-            8. **CRITICAL: Distinguish elevation from building height:**
-            - "m ü. NN" or "HBA XXX" = Plot ELEVATION above sea level (topographic reference)
-            - "Höhe max" or "maximale Gebäudehöhe" = Actual BUILDING HEIGHT limit
-            - Example: "HBA 283.25 m ü. NN" means plot elevation is 283.25m above sea level
-            - This is NOT the maximum building height!
-            - Always search separately for actual height restrictions
-
-            **WHY THIS WORKS:**
-            - ✅ Search "GRZ single family house" → Finds residential GRZ 0.4 (correct)
-            - ❌ Search "GRZ" alone → Finds commercial GRZ 0.8 (wrong for residential!)
-            - ✅ Search "HBA" → Finds "HBA 283.25" (good match)
+            5. Extract EXACT numbers from results
+            6. VALIDATE zone type matches project type (see validation rules below)
             
-            You understand that technical documents need technical search terms WITH PROJECT CONTEXT.
-            You never give generic German building code knowledge - only specific values you actually find.
-            You ALWAYS validate that found values match the project type before reporting them.
-            You know when to use vision tools vs text search based on the query type.""",
+            **CRITICAL: BUILDING TYPE VALIDATION**
+            
+            You MUST verify the zone type matches the project type before using values:
+            
+            **STUTTGART STANDARD VALUES BY BUILDING TYPE:**
+            - **Single family house (Einfamilienhaus):**
+            Zone: WA (Allgemeines Wohngebiet)
+            GRZ: 0.4 (40% ground coverage)
+            GFZ: 1.2 (120% floor area)
+            Height: ~12m (3 Vollgeschosse)
+            
+            - **Mixed-use (Mischnutzung):**
+            Zone: MI (Mischgebiet)
+            GRZ: 0.6
+            GFZ: 1.2-1.6
+            Height: ~15m
+            
+            - **Commercial (Gewerbe):**
+            Zone: GE (Gewerbegebiet)
+            GRZ: 0.8
+            GFZ: 2.4
+            Height: ~18m+
+            
+            **VALIDATION PROCESS:**
+            1. If query = "single family house" and result shows "MI zone" → **REJECT!**
+            2. If query = "single family house" and result shows "WA zone, GRZ 0.4" → **ACCEPT!**
+            3. If query = "mixed-use" and result shows "WA zone" → **REJECT!**
+            
+            **WHEN SEARCH RESULTS DON'T MATCH:**
+            If after 5-7 searches you find values but they're for the WRONG building type:
+            - State: "Found values but they appear to be for [wrong type]."
+            - Use Stuttgart standard values for the CORRECT building type
+            - Example: "Search found MI zone values, but query is for single family house. Using WA standard: GRZ 0.4, GFZ 1.2."
+            
+            **CRITICAL: Distinguish elevation from building height:**
+            - "m ü. NN" or "HBA XXX" = Plot ELEVATION above sea level (topographic)
+            - "Höhe max" or "maximale Gebäudehöhe" = Actual BUILDING HEIGHT limit
+            
+            You ALWAYS validate that found values match the project type.
+            You REJECT results from wrong building types.
+            You use Stuttgart standard values when specific plot values aren't found.""",
             llm=self.vision_llm,
             verbose=True,
             tools=[
