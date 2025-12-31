@@ -820,182 +820,59 @@ Based on {plans[0].name}:
         print("📊 Will analyze findings and prepare professional report...")
         
         consultation_task = Task(
-            description=f"""Create a professional consultation report for {query.project_type} project.
+            description=f"""You are reviewing research findings about a {query.project_type} project in {query.location}.
 
-        **CRITICAL: Use the EXACT values provided by the Research Specialist.**
+        **RESEARCH FINDINGS FROM DOCUMENT SPECIALIST:**
+        [The Document Specialist has already searched and will provide their findings above]
 
-        The Research Specialist has already found:
-        - Plot location and zoning (from vision analysis if available)
-        - GRZ, GFZ, HBA values (from text search)
-        - Bebauungsplan reference
-        - Regulatory constraints
+        **YOUR TASK:**
+        Write a professional consultation report using the EXACT values the researcher found.
 
-        **Your job:**
-        1. Take those EXACT values from the research findings
-        2. Calculate buildable areas (GRZ × plot area, GFZ × plot area)
-        3. Provide realistic development scenario
-        4. List specific opportunities and constraints based on the findings
-        5. Give actionable next steps
+        **CRITICAL RULES:**
+        1. Use ONLY the specific values found in the research (GRZ, GFZ, HBA, zoning, plan names)
+        2. Do NOT invent or assume values that weren't found
+        3. If a value is missing, state: "Not specified - confirm with building department"
+        4. Write naturally - don't follow a rigid template
 
-        **Output a professional report with:**
+        **REPORT STRUCTURE:**
 
         # CONSULTATION REPORT: {query.project_type} Development
 
         ## EXECUTIVE SUMMARY
-        [2-3 sentences using ACTUAL findings from research. If research found GRZ 0.4 and WA zoning, mention those specific values here.]
+        [2-3 sentences summarizing what you found - write naturally based on actual findings]
 
-        ## SITE ANALYSIS
-        - Plot: {query.plot_number or "General Stuttgart area"}
-        - Zoning: [From research - e.g., "WA (Wohngebiet)" - use EXACT zoning from research]
-        - Applicable Plan: [From research - e.g., "Stgt 286-2" - use EXACT plan name from research]
-
-        ## REGULATORY PARAMETERS (from Research Specialist)
-
-        **Use the EXACT values the Research Specialist found. Do NOT say "Not specified" if they found values!**
-
-        - **GRZ (Grundflächenzahl):** [EXACT value from research, e.g., "0.4"] 
-        → Meaning: This allows [GRZ × 100]% ground coverage. For a 1000m² plot, max building footprint = [GRZ × 1000]m²
-
-        - **GFZ (Geschossflächenzahl):** [EXACT value from research, e.g., "1.2"]
-        → Meaning: Total buildable floor area = [GFZ × plot area]. For 1000m² plot = [GFZ × 1000]m² total
-
-        - **Plot Elevation:** [If HBA found, e.g., "HBA 283.25 m ü. NN (elevation above sea level)"]
-        → Meaning: This is the topographic reference, NOT a height restriction
-
-        - **Building Height Limit:** [If "Höhe max" found, e.g., "12 meters" or "3 stories"]
-        → Meaning: Maximum allowed building height above ground level
-        → [If not found: "Height limit not specified in available documents - confirm with building department"]
-
-        - **Setbacks:** [From research if available, otherwise state "To be confirmed with building department"]
+        ## REGULATORY PARAMETERS
+        [List the exact values found: GRZ, GFZ, zoning, plan name, height limits, setbacks]
+        [For each value, briefly explain what it means for this project]
 
         ## DEVELOPMENT POTENTIAL
+        [Calculate buildable areas using the GRZ/GFZ values found]
+        [Describe a realistic development scenario]
 
-        **If research found GRZ and GFZ values, do calculations:**
+        ## OPPORTUNITIES & CONSTRAINTS
+        [Based on actual findings, what's possible and what's restricted?]
 
-        Assuming typical Stuttgart residential plot of 800-1000m²:
-        - Maximum ground coverage: [GRZ × 900]m² (e.g., 0.4 × 900 = 360m²)
-        - Maximum total floor area: [GFZ × 900]m² (e.g., 1.2 × 900 = 1,080m²)
+        ## NEXT STEPS
+        [Practical advice: what to do next, who to contact, what to verify]
 
-        **Realistic Development Scenario for {query.project_type}:**
-        - Ground floor: [GRZ × 900]m² (e.g., 360m²)
-        - Upper floors: [remaining area across stories] (e.g., 720m² across 2 upper floors = 360m² each)
-        - Total built area: Approximately [GFZ × 900]m²
-        - Configuration: [Describe realistic building - e.g., "3-story Einfamilienhaus with 360m² per floor, including ground floor with living areas, 2 upper floors with bedrooms, plus garage"]
+        ---
+        **Prepared by:** Architecture Consultant
+        **Date:** {datetime.now().strftime('%Y-%m-%d')}
+        **Basis:** Research findings from Stuttgart regulations database
 
-        **If research did NOT find specific values:**
-        Specific dimensional requirements not found in available documents. General Stuttgart {query.project_type} projects typically allow GRZ 0.4-0.6 and GFZ 1.2-1.8, but exact values must be confirmed with Stuttgart Building Department for this specific location.
-
-        ## KEY OPPORTUNITIES
-        
-        **Base these on ACTUAL research findings:**
-
-        ✅ [If WA zoning found: "WA (Wohngebiet) zoning allows residential development without special permits"]
-        ✅ [If GRZ found: "GRZ [value] allows [generous/moderate/limited] building footprint of up to [calculated]m²"]
-        ✅ [If location/streets found: "Located near [street names from research] providing good accessibility"]
-        ✅ [If specific plan found: "Subject to [plan name] which provides clear development framework"]
-
-        **If no specific findings:**
-        ✅ Stuttgart location provides access to infrastructure
-        ✅ Clear regulatory framework under BauGB and LBO Baden-Württemberg
-        ✅ Residential market demand in Stuttgart
-
-        ## CRITICAL CONSTRAINTS
-
-        **Base these on ACTUAL research findings:**
-
-        ⚠️ [If GRZ found: "GRZ [value] limits ground coverage to [percentage]%"]
-        ⚠️ [If height limits found: "Building height restricted to [value] meters"]
-        ⚠️ [If missing values: "Specific setback requirements not specified in available documents - must confirm with building department"]
-        ⚠️ [General: "Compliance with LBO Baden-Württemberg required for all construction"]
-
-        ## RECOMMENDED NEXT STEPS
-
-        ### Immediate Actions (Next 30 Days):
-
-        1. **Contact Stuttgart Building Department (Baurechtsamt):**
-        - Request official Bebauungsplan for {query.plot_number or "this location"}
-        - Confirm exact GRZ, GFZ, and height restrictions
-        - Obtain setback requirements
-        - Inquire about current permit processing times
-
-        2. **Commission Technical Surveys:**
-        - Official cadastral survey for exact plot dimensions
-        - Geotechnical investigation
-        - Environmental assessment (if applicable)
-
-        3. **Engage Professionals:**
-        - Local Stuttgart architect familiar with {query.district or "area"} regulations
-        - Structural engineer for preliminary design
-
-        ### Planning Phase (Months 2-4):
-
-        1. Develop concept design respecting confirmed regulatory parameters
-        2. Pre-application consultation with building department
-        3. Prepare preliminary cost estimates
-
-        ### Permitting Phase (Months 5-9):
-
-        1. Finalize architectural plans
-        2. Submit Bauantrag (building permit application)
-        3. Address any review comments
-        4. Obtain building permit
-
-        ## ESTIMATED TIMELINE & COSTS
-
-        **Timeline:**
-        - Regulatory clarification & surveys: 1-2 months
-        - Design development: 2-3 months  
-        - Permitting: 4-6 months
-        - Construction: 12-18 months
-        - **Total: 19-29 months**
-
-        **Estimated Costs (for {query.project_type}):**
-        - Building permit fees: €500-2,000
-        - Architect fees: €15,000-50,000 (depending on project scope)
-        - Engineering: €10,000-30,000
-        - Construction: €2,500-4,000/m² (varies by specification)
-
-        *Note: Costs are estimates. Obtain detailed quotes from local professionals.*
-
-        ## REGULATORY REFERENCES
-
-        - **Bebauungsplan:** [From research if found, e.g., "Stgt 286-2"]
-        - **Federal Law:** Baugesetzbuch (BauGB)
-        - **State Law:** Landesbauordnung Baden-Württemberg (LBO BW)
-        - **Vision Analysis:** [If vision was used: "Visual plan analysis of [plan name]"]
-        - **Text Sources:** [List specific documents from research]
+        **Disclaimer:** Verify all values with Stuttgart Building Department before proceeding.
 
         ---
 
-        **Prepared By:** Architecture & Real Estate Development Consultant   
-        **Date:** {datetime.now().strftime('%Y-%m-%d')}  
-        **Project Type:** {query.project_type}
-        **Location:** {query.location}, {query.district}
-
-        **Basis:** Research findings from Stuttgart building regulations database and {
-            "visual plan analysis" if use_vision and is_plot_query else "text-based regulatory documents"
-        }
-
-        **Important Disclaimer:** This consultation is based on available regulatory data as of {datetime.now().strftime('%Y-%m-%d')}. 
-        All dimensional requirements, costs, and timelines must be verified with:
-        - Stuttgart Building Department (Baurechtsamt Stuttgart)
-        - Licensed local architect
-        - Structural engineer
-
-        Plot-specific requirements may vary. Official cadastral survey and building department consultation are mandatory before proceeding with design.
-
-        ---
-
-        **CRITICAL INSTRUCTIONS FOR YOU:**
-        - Use EXACT values from research (don't say "Not specified" if research found values!)
-        - If research found GRZ 0.4, USE 0.4 in ALL calculations
-        - If research found zoning WA, EXPLAIN what WA allows for {query.project_type}
-        - Make calculations realistic with example plot sizes (800-1000m² typical)
-        - Provide SPECIFIC advice based on actual research findings, not generic templates
-        - If certain values missing, clearly state what's missing and how to obtain it
+        **WRITING GUIDELINES:**
+        - Be concise and professional
+        - Use the researcher's exact values (don't round or estimate)
+        - Write in clear, natural language (not template-style)
+        - Focus on actionable information
+        - Total length: 500-900 words
         """,
             agent=self.agents["architecture_consultant"],
-            expected_output="Professional consultation report using exact research values, with realistic calculations and specific recommendations. Report should be 1200-1800 words and client-ready."
+            expected_output="Professional consultation report (800-1200 words) using exact research values, written naturally without rigid formatting"
         )
 
         # =====================================================================
@@ -1210,37 +1087,41 @@ Based on {plans[0].name}:
         print("Using Document Specialist ONLY (no full report)")
         print("-"*70)
         
-        # Simple task for Document Specialist
         definition_task = Task(
-            description=f"""Answer this definition/explanation question:
+            description=f"""Define/explain this term or concept:
             "{query.query}"
             
-            Search the documents and provide a clear, concise explanation (200-400 words).
-            Include relevant citations and examples.
+            **INSTRUCTIONS:**
+            1. Make ONE search for the term/concept
+            2. Provide a clear definition (200-300 words)
+            3. Include an example if helpful
+            4. Cite the legal reference
+            5. STOP after providing the definition
             
-            Format your answer as:
-            **[Term/Concept]**
+            **FORMAT:**
             
-            [Clear explanation in 2-3 paragraphs]
+            **[Term/Concept Name]**
+            
+            [Clear definition in 2-3 sentences]
             
             **Example:**
             [Practical example if relevant]
             
             **Legal Reference:**
-            [Cite specific laws/regulations: BauGB, BauNVO, LBO BW]
+            [BauGB § / BauNVO § / LBO BW §]
             
-            Do NOT create a full consultation report - just answer the question directly.
+            DO NOT search multiple times or create a long report.
             """,
             agent=self.agents["document_specialist"],
-            expected_output="Clear explanation with citations (200-400 words)"
+            expected_output="Clear definition with example (200-300 words)"
         )
         
-        # Single agent crew
         crew = Crew(
             agents=[self.agents["document_specialist"]],
             tasks=[definition_task],
             process=Process.sequential,
-            verbose=True
+            verbose=True,
+            max_iter=5  # ← CRITICAL: Very low limit for definitions
         )
         
         try:
@@ -1248,7 +1129,6 @@ Based on {plans[0].name}:
             result = crew.kickoff()
             elapsed = time.time() - start_time
             
-            # Extract answer
             answer = result.tasks_output[-1].raw if hasattr(result, 'tasks_output') else str(result)
             
             print(f"✅ Definition query complete in {elapsed:.2f}s")
@@ -1276,51 +1156,52 @@ Based on {plans[0].name}:
     def _handle_process_query(self, query: RegulationQuery, start_time: float) -> Dict[str, Any]:
         """Handle administrative process questions"""
         
-        # ADD THIS BLOCK:
         print("="*70)
         print("📋 PROCESS MODE ACTIVATED")
         print("="*70)
         print(f"Query: {query.query}")
         print("Using Document Specialist for step-by-step guidance (no full report)")
-        print("-"*70)   
-
-        # Research process
+        print("-"*70)
+        
         process_task = Task(
-            description=f"""Find information about this administrative process:
+            description=f"""Explain this administrative process:
             "{query.query}"
             
-            Search for and provide:
+            **INSTRUCTIONS:**
+            1. Make ONE search for process/procedure information
+            2. List the steps clearly (400-600 words)
+            3. Include required documents and authorities
+            4. STOP after listing the steps
+            
+            **FORMAT:**
             
             **Required Steps:**
-            [List the sequential steps clearly]
+            1. [Step 1]
+            2. [Step 2]
+            3. [Step 3]
             
             **Required Documents:**
-            [List all necessary documents]
+            - [Document 1]
+            - [Document 2]
             
-            **Responsible Authorities:**
-            [Which offices to contact]
+            **Responsible Authority:**
+            [Which office/department]
             
             **Timeline:**
             [Expected processing time]
             
-            **Relevant Regulations:**
-            [Cite applicable laws]
-            
-            **Contact Information:**
-            [If available in documents]
-            
-            Provide clear, actionable information (400-600 words).
-            Do NOT create a full consultation report - focus on the process.
+            DO NOT create a full consultation report.
             """,
             agent=self.agents["document_specialist"],
-            expected_output="Process information with steps and requirements (400-600 words)"
+            expected_output="Step-by-step process guide (400-600 words)"
         )
         
         crew = Crew(
             agents=[self.agents["document_specialist"]],
             tasks=[process_task],
             process=Process.sequential,
-            verbose=True
+            verbose=True,
+            max_iter=8  # ← CRITICAL: Medium limit for process queries
         )
         
         try:
@@ -1354,39 +1235,55 @@ Based on {plans[0].name}:
 
     def _handle_general_query(self, query: RegulationQuery, start_time: float) -> Dict[str, Any]:
         """Handle general information queries"""
-        
-        # ADD THIS BLOCK:
+            
         print("="*70)
         print("ℹ️  GENERAL INFORMATION MODE ACTIVATED")
         print("="*70)
         print(f"Query: {query.query}")
         print("Using Document Specialist for information overview (no full report)")
-        print("-"*70)     
-           
+        print("-"*70)
+        
         general_task = Task(
-            description=f"""Provide information about:
+            description=f"""Answer this question about Stuttgart regulations:
             "{query.query}"
             
-            Search the documents and provide a comprehensive overview (400-700 words).
+            **INSTRUCTIONS:**
+            1. Make ONE search using the tool: search_regulations
+            2. Extract key information from the results
+            3. Format as a clear, concise answer (300-500 words)
+            4. Include relevant citations
+            5. STOP after providing the answer
             
-            Include:
-            - Key facts and context
-            - Relevant statistics (if available)
-            - Historical background (if relevant)
-            - Current situation
-            - References to source documents
+            **FORMAT YOUR ANSWER AS:**
             
-            Structure your response clearly with sections if needed.
+            [Direct answer to the question in 2-3 paragraphs]
+            
+            **Key Requirements:**
+            - [Bullet point 1]
+            - [Bullet point 2]
+            - [Bullet point 3]
+            
+            **Legal References:**
+            [Cite specific documents/regulations found]
+            
+            **DO NOT:**
+            - Create a full consultation report
+            - Search endlessly for more details
+            - Generate a multi-page analysis
+            
+            Keep it concise and focused on answering the specific question asked.
             """,
             agent=self.agents["document_specialist"],
-            expected_output="Comprehensive information with context (400-700 words)"
+            expected_output="Concise answer (300-500 words) with citations"
         )
         
+        # Create crew with LOWER max_iter for simple queries
         crew = Crew(
             agents=[self.agents["document_specialist"]],
             tasks=[general_task],
             process=Process.sequential,
-            verbose=True
+            verbose=True,
+            max_iter=10  # ← CRITICAL: Lower limit for simple queries
         )
         
         try:
