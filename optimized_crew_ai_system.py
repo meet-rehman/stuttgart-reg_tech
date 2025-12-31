@@ -588,22 +588,18 @@ Based on {plans[0].name}:
         self.metrics['total_queries'] += 1
         
         # =====================================================================
-        # NEW: CLASSIFY QUERY TYPE
+        # CLASSIFY QUERY TYPE (CRITICAL: DO THIS FIRST!)
         # =====================================================================
         
         query_type = self.classify_query_type(query)
-        print(f"🔍 Query Type: {query_type.upper()}")
         
-        # ADD THIS DEBUG INFO:
-        print(f"🔍 Query Text: '{query.query}'")
-        print(f"🔍 Keywords detected:")
-        if 'what is' in query.query.lower() or 'was ist' in query.query.lower():
-            print("   - Definition keyword found")
-        if 'how to' in query.query.lower() or 'wie' in query.query.lower():
-            print("   - Process keyword found")
-        if 'structure' in query.query.lower() or 'overview' in query.query.lower():
-            print("   - General information keyword found")
-        print("-"*70)
+        print(f"\n{'='*70}")
+        print(f"🔍 QUERY CLASSIFICATION")
+        print(f"{'='*70}")
+        print(f"Query: '{query.query}'")
+        print(f"Classified as: {query_type.upper()}")
+        print(f"{'='*70}\n")
+        
         # =====================================================================
         # ROUTE BASED ON QUERY TYPE
         # =====================================================================
@@ -617,13 +613,12 @@ Based on {plans[0].name}:
         elif query_type == 'general':
             return self._handle_general_query(query, start_time)
         
-    # ⭐ ADD THIS ELSE BLOCK:
-        else:  # site_specific
-                # =====================================================================
-                # SITE-SPECIFIC QUERIES (Original Logic)
-                # =====================================================================
+        else:  
+            # ================================================================
+            # SITE-SPECIFIC QUERIES (Original Logic)
+            # ================================================================
             
-            print("🏗️ SITE-SPECIFIC MODE: Full consultation report")
+            print("🏗️ SITE-SPECIFIC MODE: Full consultation report")  
             
             # Detect plot-specific query
             is_plot_query = query.plot_number is not None or any(
@@ -1145,59 +1140,65 @@ Based on {plans[0].name}:
     
     def classify_query_type(self, query: RegulationQuery) -> str:
         """
-        Classify query into types:
-        - 'site_specific': Requires consultation report (plot/building analysis)
-        - 'definition': Simple definition/explanation
-        - 'process': Administrative process question
-        - 'general': General information
+        Classify query with improved keyword detection
         """
         query_lower = query.query.lower()
         
-        # Site-specific indicators
-        site_keywords = [
-            'build', 'plot', 'grundstück', 'flurstück', 
-            'can i', 'möchte bauen', 'planning to build',
-            'development', 'projekt', 'single family',
-            'einfamilienhaus', 'wohngebäude', 'storeys',
-            'geschosse', 'height', 'höhe', 'area', 'fläche',
-            'permit for', 'genehmigung für', '3 storey',
-            '12m high', 'total area', 'residential building'
-        ]
-        
-        # Definition indicators
-        definition_keywords = [
-            'what is', 'was ist', 'define', 'definition',
-            'bedeutung', 'explain', 'erklären', 'difference between',
-            'unterschied zwischen', 'meaning of', 'what does', 'was bedeutet'
-        ]
-        
-        # Process indicators
-        process_keywords = [
-            'how to', 'wie kann ich', 'steps', 'schritte',
-            'process', 'verfahren', 'register', 'anmelden',
-            'apply', 'beantragen', 'submit', 'einreichen',
-            'procedure', 'ablauf', 'how do i'
-        ]
-        
-        # General information indicators
-        general_keywords = [
-            'tell me about', 'erzähl mir über',
-            'overview', 'überblick', 'history', 'geschichte',
-            'climate', 'klima', 'statistics', 'statistik'
-        ]
-        
-        # Check query type (order matters - more specific first)
-        if query.plot_number or any(kw in query_lower for kw in site_keywords):
+        # Priority 1: If has plot number, always site-specific
+        if query.plot_number:
             return 'site_specific'
-        elif any(kw in query_lower for kw in definition_keywords):
+        
+        # Priority 2: Definition patterns (MUST check first)
+        if query_lower.startswith('what is ') or query_lower.startswith('was ist '):
             return 'definition'
-        elif any(kw in query_lower for kw in process_keywords):
+        
+        if query_lower.startswith('what are ') or query_lower.startswith('was sind '):
+            # Check if asking about requirements/regulations (general info)
+            if any(word in query_lower for word in ['requirement', 'regulation', 'rule', 'law']):
+                return 'general'
+            else:
+                return 'definition'
+        
+        if query_lower.startswith('what does ') or query_lower.startswith('explain '):
+            return 'definition'
+        
+        # Priority 3: Process patterns
+        if query_lower.startswith('how to ') or query_lower.startswith('how do i '):
             return 'process'
-        elif any(kw in query_lower for kw in general_keywords):
+        
+        if any(phrase in query_lower for phrase in ['what steps', 'procedure for', 'how can i apply']):
+            return 'process'
+        
+        # Priority 4: General information patterns
+        if any(phrase in query_lower for phrase in [
+            'requirements for', 'regulations for', 'rules for',
+            'structure of', 'overview of', 'tell me about',
+            'information about', 'what authorities'
+        ]):
             return 'general'
-        else:
-            # Default: if unclear, treat as site-specific to be safe
+        
+        # Priority 5: Site-specific patterns (building/construction)
+        if any(phrase in query_lower for phrase in [
+            'i want to build', 'i am planning', "i'm planning",
+            'planning to build', 'build a house', 'build a building',
+            'construct a', 'development project',
+            'storeys', 'stories', 'meters high', 'm high',
+            'total area', 'floor area', 'single family house'
+        ]):
             return 'site_specific'
+        
+        # Priority 6: If mentions plot/land (site-specific)
+        if any(word in query_lower for word in [
+            'plot', 'grundstück', 'flurstück', 'parzelle', 'land', 'site'
+        ]):
+            return 'site_specific'
+        
+        # Default: Short questions are likely general/definition
+        if len(query_lower.split()) <= 10:
+            return 'general'
+        
+        # Fallback
+        return 'site_specific'
     
     def _handle_definition_query(self, query: RegulationQuery, start_time: float) -> Dict[str, Any]:
         """Handle simple definition/explanation queries"""
