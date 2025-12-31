@@ -350,6 +350,7 @@
                         <label for="buildingType">🏗️ Building Type</label>
                         <select id="buildingType">
                             <option value="">Select type...</option>
+                            <option value="" selected>🤖 Auto-detect from query</option>
                             <option value="residential-single">Single Family House</option>
                             <option value="residential-multi">Multi-Family House</option>
                             <option value="residential-apartment">Apartment Building</option>
@@ -512,8 +513,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         query: query,
-                        project_type: document.getElementById('buildingType').value || 'mixed-use',
-                        location: 'Stuttgart',
+                        project_type: document.getElementById('buildingType').value || '',                        location: 'Stuttgart',
                         district: document.getElementById('location').value || 'general',
                         plot_number: plotNumber
                     })
