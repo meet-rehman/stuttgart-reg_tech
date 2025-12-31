@@ -617,193 +617,195 @@ Based on {plans[0].name}:
         elif query_type == 'general':
             return self._handle_general_query(query, start_time)
         
-        # =====================================================================
-        # SITE-SPECIFIC QUERIES (Original Logic)
-        # =====================================================================
-        
-        print("🏗️ SITE-SPECIFIC MODE: Full consultation report")
-        
-        # Detect plot-specific query
-        is_plot_query = query.plot_number is not None or any(
-            keyword in query.query.lower() 
-            for keyword in ['plot', 'flurstück', 'grundstück', 'parzelle', 'flurstücknummer', 'einfamilienhaus', 'efh']
-        )
-        
-        if is_plot_query:
-            print("📍 Detected plot-specific query") 
-            logger.info("📍 Detected plot-specific query")
-        
-        # Check if vision should be used for this query
-        use_vision = (
-            self.vision_enabled and 
-            query.enable_vision and 
-            (is_plot_query or 'plan' in query.query.lower())
-        )
-        
-        # ADD THESE VISIBILITY MESSAGES
-        if use_vision:
-            print("👁️ Vision analysis ENABLED")
-        else:
-            print("📚 Text-only analysis mode")
-        
-        # =====================================================================
-        # TASK 1: Research (Text + Vision)
-        # =====================================================================
-        
-        # ADD THIS BEFORE TASK CREATION
-        print("\n" + "-"*70)
-        print("📚 AGENT 1: DOCUMENT SPECIALIST")
-        print("-"*70)
-        print("🔍 Starting regulatory document search...")
-        
-        research_description = f"""Research this building regulation query:
-    "{query.query}"
-
-    Project Details:
-    - Type: {query.project_type}
-    - Location: {query.location}, {query.district}
-    {'- Plot Number: ' + query.plot_number if query.plot_number else ''}
-
-    **CRITICAL: MULTI-STEP SEARCH STRATEGY**
-    You MUST make multiple separate searches (5-8 searches) using SHORT queries.
-    Complex queries fail - simple queries succeed!
-
-    """
+    # ⭐ ADD THIS ELSE BLOCK:
+        else:  # site_specific
+                # =====================================================================
+                # SITE-SPECIFIC QUERIES (Original Logic)
+                # =====================================================================
             
-        if use_vision and is_plot_query:
-            research_description += f"""
-    **VISION-FIRST STRATEGY FOR PLOT {query.plot_number or 'QUERY'}:**
+            print("🏗️ SITE-SPECIFIC MODE: Full consultation report")
+            
+            # Detect plot-specific query
+            is_plot_query = query.plot_number is not None or any(
+                keyword in query.query.lower() 
+                for keyword in ['plot', 'flurstück', 'grundstück', 'parzelle', 'flurstücknummer', 'einfamilienhaus', 'efh']
+            )
+            
+            if is_plot_query:
+                print("📍 Detected plot-specific query") 
+                logger.info("📍 Detected plot-specific query")
+            
+            # Check if vision should be used for this query
+            use_vision = (
+                self.vision_enabled and 
+                query.enable_vision and 
+                (is_plot_query or 'plan' in query.query.lower())
+            )
+            
+            # ADD THESE VISIBILITY MESSAGES
+            if use_vision:
+                print("👁️ Vision analysis ENABLED")
+            else:
+                print("📚 Text-only analysis mode")
+            
+            # =====================================================================
+            # TASK 1: Research (Text + Vision)
+            # =====================================================================
+            
+            # ADD THIS BEFORE TASK CREATION
+            print("\n" + "-"*70)
+            print("📚 AGENT 1: DOCUMENT SPECIALIST")
+            print("-"*70)
+            print("🔍 Starting regulatory document search...")
+            
+            research_description = f"""Research this building regulation query:
+        "{query.query}"
 
-    STEP 1 (MANDATORY - DO THIS FIRST):
-    Tool: search_plot_in_plans
-    Input: "{query.plot_number or 'plot number from query'}"
-    Purpose: Find plot location and identify which Bebauungsplan it's in
-    Expected output: Plan name (e.g., "Stgt 286-2"), zoning (e.g., "WA")
+        Project Details:
+        - Type: {query.project_type}
+        - Location: {query.location}, {query.district}
+        {'- Plot Number: ' + query.plot_number if query.plot_number else ''}
 
-    STEP 2 (IF STEP 1 FOUND THE PLOT):
-    Tool: analyze_plot_details  
-    Input: "{query.plot_number or 'plot number from query'}"
-    Purpose: Get comprehensive plot analysis
-    Expected output: Detailed analysis with any visible regulatory values
+        **CRITICAL: MULTI-STEP SEARCH STRATEGY**
+        You MUST make multiple separate searches (5-8 searches) using SHORT queries.
+        Complex queries fail - simple queries succeed!
 
-    STEP 3 (AFTER VISION STEPS):
-    Tool: search_regulations
-    Input: [Plan name from Step 1] (e.g., "Stgt 286-2" or "Stgt 272")
-    Purpose: Find text-based regulations for this specific plan
-    
-    STEP 4:
-    Tool: search_regulations
-    Input: "GRZ"
-    Purpose: Find plot coverage ratio values
-    
-    STEP 5:
-    Tool: search_regulations
-    Input: "GFZ"
-    Purpose: Find floor area ratio values
-    
-    STEP 6:
-    Tool: search_regulations
-    Input: "HBA"
-    Purpose: Find building height values
+        """
+                
+            if use_vision and is_plot_query:
+                research_description += f"""
+        **VISION-FIRST STRATEGY FOR PLOT {query.plot_number or 'QUERY'}:**
 
-    STEP 7 (OPTIONAL):
-    Tool: get_context
-    Input: [Plan name from Step 1]
-    Purpose: Get additional regulatory context
+        STEP 1 (MANDATORY - DO THIS FIRST):
+        Tool: search_plot_in_plans
+        Input: "{query.plot_number or 'plot number from query'}"
+        Purpose: Find plot location and identify which Bebauungsplan it's in
+        Expected output: Plan name (e.g., "Stgt 286-2"), zoning (e.g., "WA")
 
-    # ADD THIS CRITICAL INSTRUCTION BLOCK
-    **CRITICAL FALLBACK (ONLY IF ALL SEARCHES ABOVE RETURN NOTHING):**
-    If, after all searches, you still lack specific GRZ, GFZ, or HBA values:
-    Assume Stuttgart's most common residential values for the final report:
-    - GRZ: 0.4
-    - GFZ: 1.2
-    - HBA: 283.25 m ü. NN (or approx 3-4 stories)
-    State clearly in your output: "Specific regulatory values not found; proceeding with standard Stuttgart assumptions (GRZ 0.4 / GFZ 1.2)."
+        STEP 2 (IF STEP 1 FOUND THE PLOT):
+        Tool: analyze_plot_details  
+        Input: "{query.plot_number or 'plot number from query'}"
+        Purpose: Get comprehensive plot analysis
+        Expected output: Detailed analysis with any visible regulatory values
 
-    **CRITICAL RULES:**
-    1. DO Steps 1-2 (vision) BEFORE any text searches
-    2. If vision times out or fails, continue with Steps 3-6
-    3. Vision gives you: plot location, zoning, plan name
-    4. Text searches give you: GRZ, GFZ, HBA values
-    5. Combine both sources in your final answer
+        STEP 3 (AFTER VISION STEPS):
+        Tool: search_regulations
+        Input: [Plan name from Step 1] (e.g., "Stgt 286-2" or "Stgt 272")
+        Purpose: Find text-based regulations for this specific plan
+        
+        STEP 4:
+        Tool: search_regulations
+        Input: "GRZ"
+        Purpose: Find plot coverage ratio values
+        
+        STEP 5:
+        Tool: search_regulations
+        Input: "GFZ"
+        Purpose: Find floor area ratio values
+        
+        STEP 6:
+        Tool: search_regulations
+        Input: "HBA"
+        Purpose: Find building height values
 
-    **IF VISION FAILS:**
-    Continue with text-only strategy (Steps 3-6), but state: 
-    "Vision analysis unavailable. Using text regulations only."
-    """
-        else:
+        STEP 7 (OPTIONAL):
+        Tool: get_context
+        Input: [Plan name from Step 1]
+        Purpose: Get additional regulatory context
+
+        # ADD THIS CRITICAL INSTRUCTION BLOCK
+        **CRITICAL FALLBACK (ONLY IF ALL SEARCHES ABOVE RETURN NOTHING):**
+        If, after all searches, you still lack specific GRZ, GFZ, or HBA values:
+        Assume Stuttgart's most common residential values for the final report:
+        - GRZ: 0.4
+        - GFZ: 1.2
+        - HBA: 283.25 m ü. NN (or approx 3-4 stories)
+        State clearly in your output: "Specific regulatory values not found; proceeding with standard Stuttgart assumptions (GRZ 0.4 / GFZ 1.2)."
+
+        **CRITICAL RULES:**
+        1. DO Steps 1-2 (vision) BEFORE any text searches
+        2. If vision times out or fails, continue with Steps 3-6
+        3. Vision gives you: plot location, zoning, plan name
+        4. Text searches give you: GRZ, GFZ, HBA values
+        5. Combine both sources in your final answer
+
+        **IF VISION FAILS:**
+        Continue with text-only strategy (Steps 3-6), but state: 
+        "Vision analysis unavailable. Using text regulations only."
+        """
+            else:
+                research_description += """
+        **TEXT-ONLY SEARCH STRATEGY:**
+
+        STEP 1:
+        Tool: search_regulations
+        Input: "GRZ"
+        Purpose: Find plot coverage ratio
+        
+        STEP 2:
+        Tool: search_regulations
+        Input: "GFZ"
+        Purpose: Find floor area ratio
+        
+        STEP 3:
+        Tool: search_regulations
+        Input: "HBA"
+        Purpose: Find building height values
+
+        STEP 4:
+        Tool: get_context
+        Input: [Plan name from Step 1]
+        Purpose: Get additional regulatory details
+
+        **CRITICAL FALLBACK (ONLY IF ALL SEARCHES ABOVE RETURN NOTHING):**
+        If, after all searches, you still lack specific GRZ, GFZ, or HBA values:
+        Assume Stuttgart's most common residential values for the final report:
+        - GRZ: 0.4
+        - GFZ: 1.2
+        - HBA: 283.25 m ü. NN (or approx 3-4 stories)
+        State clearly in your output: "Specific regulatory values not found; proceeding with standard Stuttgart assumptions (GRZ 0.4 / GFZ 1.2)."
+
+        **WHY SHORT QUERIES WORK BETTER:**
+        - ✅ "HBA" matches "HBA 283.25" (good)
+        - ❌ "building height in Stgt 272 for residential"  →  Poor match
+        """
+                
             research_description += """
-    **TEXT-ONLY SEARCH STRATEGY:**
 
-    STEP 1:
-    Tool: search_regulations
-    Input: "GRZ"
-    Purpose: Find plot coverage ratio
-    
-    STEP 2:
-    Tool: search_regulations
-    Input: "GFZ"
-    Purpose: Find floor area ratio
-    
-    STEP 3:
-    Tool: search_regulations
-    Input: "HBA"
-    Purpose: Find building height values
+        **EXTRACT EXACT VALUES:**
+        After each search, look for specific numbers:
+        - HBA values: "HBA 283.25" or "HBA 28325" (may lack decimal)
+        - GRZ values: "GRZ 0.4" or "Grundflächenzahl: 0,4"  
+        - GFZ values: "GFZ 1.2" or "Geschossflächenzahl: 1,2"
+        - EFH values: "EFH 261.50" (floor elevation)
+        - Zoning: "WA" (Wohngebiet), "MI" (Mischgebiet), "GE" (Gewerbegebiet)
 
-    STEP 4:
-    Tool: get_context
-    Input: [Plan name from Step 1]
-    Purpose: Get additional regulatory details
+        **FORMATTING RULES:**
+        ✅ GOOD: "GRZ: 0.4 (Source: stgt-286-2-bebauungsplan, Page 1)"
+        ✅ GOOD: "Plot 18A is in WA zone (Source: Vision analysis of Stgt 286-2)"
+        ✅ GOOD: "HBA: 283.25 m ü. NN (Source: site draft)"
+        ❌ BAD: "GRZ typically 0.3-0.4" (don't use generic values)
+        ❌ BAD: "around 0.4" (be exact)
+        ❌ BAD: Generic German building code knowledge without sources
 
-    **CRITICAL FALLBACK (ONLY IF ALL SEARCHES ABOVE RETURN NOTHING):**
-    If, after all searches, you still lack specific GRZ, GFZ, or HBA values:
-    Assume Stuttgart's most common residential values for the final report:
-    - GRZ: 0.4
-    - GFZ: 1.2
-    - HBA: 283.25 m ü. NN (or approx 3-4 stories)
-    State clearly in your output: "Specific regulatory values not found; proceeding with standard Stuttgart assumptions (GRZ 0.4 / GFZ 1.2)."
+        **IF VALUES NOT FOUND:**
+        State clearly: "Exact [GRZ/GFZ/HBA] value not found in available documents"
+        Do NOT make up typical values or estimates.
 
-    **WHY SHORT QUERIES WORK BETTER:**
-    - ✅ "HBA" matches "HBA 283.25" (good)
-    - ❌ "building height in Stgt 272 for residential"  →  Poor match
-    """
-            
-        research_description += """
+        **FOR LOCATION QUESTIONS:**
+        - Identify specific streets from search results
+        - State zoning types: WA (residential), MI (mixed), GE (commercial)
+        - Example: "Allowed in WA zones along Nordbahnhofstraße and Türlenstraße"
 
-    **EXTRACT EXACT VALUES:**
-    After each search, look for specific numbers:
-    - HBA values: "HBA 283.25" or "HBA 28325" (may lack decimal)
-    - GRZ values: "GRZ 0.4" or "Grundflächenzahl: 0,4"  
-    - GFZ values: "GFZ 1.2" or "Geschossflächenzahl: 1,2"
-    - EFH values: "EFH 261.50" (floor elevation)
-    - Zoning: "WA" (Wohngebiet), "MI" (Mischgebiet), "GE" (Gewerbegebiet)
+        **RESPONSE LENGTH:**
+        Keep under 800 words. Focus on:
+        1. Exact values with sources
+        2. Clear citations
+        3. No repetition
+        4. No generic information
 
-    **FORMATTING RULES:**
-    ✅ GOOD: "GRZ: 0.4 (Source: stgt-286-2-bebauungsplan, Page 1)"
-    ✅ GOOD: "Plot 18A is in WA zone (Source: Vision analysis of Stgt 286-2)"
-    ✅ GOOD: "HBA: 283.25 m ü. NN (Source: site draft)"
-    ❌ BAD: "GRZ typically 0.3-0.4" (don't use generic values)
-    ❌ BAD: "around 0.4" (be exact)
-    ❌ BAD: Generic German building code knowledge without sources
-
-    **IF VALUES NOT FOUND:**
-    State clearly: "Exact [GRZ/GFZ/HBA] value not found in available documents"
-    Do NOT make up typical values or estimates.
-
-    **FOR LOCATION QUESTIONS:**
-    - Identify specific streets from search results
-    - State zoning types: WA (residential), MI (mixed), GE (commercial)
-    - Example: "Allowed in WA zones along Nordbahnhofstraße and Türlenstraße"
-
-    **RESPONSE LENGTH:**
-    Keep under 800 words. Focus on:
-    1. Exact values with sources
-    2. Clear citations
-    3. No repetition
-    4. No generic information
-
-    Provide detailed findings with EXACT values and clear source citations.
-    """
+        Provide detailed findings with EXACT values and clear source citations.
+        """
 
         # Create Task 1        
         research_task = Task(
