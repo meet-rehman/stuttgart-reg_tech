@@ -57,11 +57,54 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+def extract_project_type(query: str) -> str:
+    """Extract project type from query text"""
+    query_lower = query.lower()
+    
+    # Single family house patterns
+    if any(term in query_lower for term in [
+        'single family house', 'einfamilienhaus', 'single-family',
+        'detached house', 'freistehendes haus'
+    ]):
+        return "single-family house"
+    
+    # Multi-family patterns
+    if any(term in query_lower for term in [
+        'multi family', 'mehrfamilienhaus', 'apartment building',
+        'wohngebäude', 'residential building'
+    ]):
+        return "residential building"
+    
+    # Mixed-use patterns
+    if any(term in query_lower for term in [
+        'mixed-use', 'mischnutzung', 'commercial and residential',
+        'shops and apartments'
+    ]):
+        return "mixed-use"
+    
+    # Commercial patterns
+    if any(term in query_lower for term in [
+        'commercial', 'office', 'retail', 'shop', 'store',
+        'gewerbe', 'büro', 'geschäft'
+    ]):
+        return "commercial"
+    
+    # Industrial patterns
+    if any(term in query_lower for term in [
+        'industrial', 'warehouse', 'factory', 'industrie'
+    ]):
+        return "industrial"
+    
+    # Default
+    return "residential"
+
+
 @dataclass
 class RegulationQuery:
     """Structure for regulation queries"""
     query: str
-    project_type: str = "mixed-use"
+    project_type: str = "residential"
     location: str = "Stuttgart"
     district: str = "general"
     urgency: str = "normal"

@@ -330,9 +330,12 @@ async def list_available_plans():
 @app.post("/api/multi-agent/analyze")  # ✅ Removed response_model
 async def multi_agent_analysis(request: MultiAgentRequest, background_tasks: BackgroundTasks):
     """
-    Multi-agent analysis - ENHANCED with plot support
+    Multi-agent analysis - ENHANCED with plot support and auto project-type detection
     
-    Now supports plot_number field for plot-specific queries.
+    Now supports:
+    - Auto-detection of project type from query text
+    - Plot_number field for plot-specific queries
+    - Fallback to safe defaults
     """
     if not crew_system:
         raise HTTPException(status_code=503, detail="AI system not initialized")
@@ -344,39 +347,63 @@ async def multi_agent_analysis(request: MultiAgentRequest, background_tasks: Bac
         if request.plot_number:
             logger.info(f"📍 Plot-specific query for: {request.plot_number}")
         
-        # Create query
+        # =====================================================================
+        # AUTO-DETECT PROJECT TYPE
+        # =====================================================================
+        from optimized_crew_ai_system import extract_project_type
+        
+        detected_type = extract_project_type(request.query)
+        final_project_type = request.project_type or detected_type
+        
+        logger.info(f"📋 Project type: {final_project_type} (detected: {detected_type})")
+        
+        # =====================================================================
+        # CREATE QUERY
+        # =====================================================================
         query = RegulationQuery(
             query=request.query,
-            project_type=request.project_type,
+            project_type=final_project_type,  # ← Use detected or provided type
             location=request.location,
             district=request.district,
             urgency=request.urgency,
             plot_number=request.plot_number
         )
         
-        # Execute analysis - returns dict with 'success', 'analysis', etc.
+        # =====================================================================
+        # EXECUTE ANALYSIS
+        # =====================================================================
         result = crew_system.execute_analysis(query)
         
         processing_time = (datetime.now() - start_time).total_seconds()
         
-        # Check if plot was found (if plot query)
+        # =====================================================================
+        # CHECK PLOT INFO (if plot query)
+        # =====================================================================
         plot_info = None
         if request.plot_number and crew_system.vision_agent:
-            plot_search = crew_system.vision_agent.find_plot(request.plot_number)
-            if plot_search['found']:
-                plot_info = {
-                    "found": True,
-                    "plan_file": plot_search['plan_file']
-                }
+            try:
+                plot_search = crew_system.vision_agent.find_plot_parallel(request.plot_number)
+                if plot_search.get('found'):
+                    plot_info = {
+                        "found": True,
+                        "plan_file": plot_search.get('plan_file'),
+                        "search_time": plot_search.get('search_time', 0)
+                    }
+            except Exception as e:
+                logger.warning(f"⚠️ Plot search failed: {e}")
+                plot_info = {"found": False, "error": str(e)}
         
-        # Build response from result dict
+        # =====================================================================
+        # BUILD RESPONSE
+        # =====================================================================
         return {
             "success": result.get('success', True),
-            "analysis": result.get('analysis', str(result)),  # ✅ Extract analysis string
+            "analysis": result.get('analysis', str(result)),
             "timestamp": datetime.now().isoformat(),
             "query_details": {
                 "query": request.query,
-                "project_type": request.project_type,
+                "project_type": final_project_type,  # ← Return detected type
+                "detected_type": detected_type,      # ← Show what was detected
                 "location": request.location,
                 "district": request.district,
                 "urgency": request.urgency,
@@ -385,11 +412,12 @@ async def multi_agent_analysis(request: MultiAgentRequest, background_tasks: Bac
             "processing_time": result.get('processing_time', processing_time),
             "agents_used": [
                 "Document & Visual Plan Specialist",
-                "Regulatory Legal Analyst"
+                "Architecture & Real Estate Development Consultant"
             ],
             "plot_info": plot_info,
             "vision_used": result.get('vision_used', False),
-            "is_plot_query": result.get('is_plot_query', False)
+            "is_plot_query": result.get('is_plot_query', False),
+            "query_type": result.get('query_type', 'site_specific')  # ← Add query type
         }
         
     except Exception as e:
