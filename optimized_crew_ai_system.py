@@ -690,18 +690,18 @@ Based on {plans[0].name}:
         
         STEP 4:
         Tool: search_regulations
-        Input: "GRZ"
-        Purpose: Find plot coverage ratio values
-        
+        Input: "GRZ {query.project_type}" OR "[Plan name from Step 1] GRZ"
+        Purpose: Find plot coverage ratio for this building type/plan
+
         STEP 5:
         Tool: search_regulations
-        Input: "GFZ"
-        Purpose: Find floor area ratio values
-        
+        Input: "GFZ {query.project_type}" OR "[Plan name from Step 1] GFZ"
+        Purpose: Find floor area ratio for this building type/plan
+
         STEP 6:
         Tool: search_regulations
-        Input: "HBA"
-        Purpose: Find building height values
+        Input: "building height {query.project_type}" OR "[Plan name] Höhe"
+        Purpose: Find building height for this building type/plan
 
         STEP 7 (OPTIONAL):
         Tool: get_context
@@ -730,27 +730,34 @@ Based on {plans[0].name}:
         """
             else:
                 research_description += """
+
         **TEXT-ONLY SEARCH STRATEGY:**
 
         STEP 1:
         Tool: search_regulations
-        Input: "GRZ"
-        Purpose: Find plot coverage ratio
-        
+        Input: "GRZ {query.project_type}"
+        Purpose: Find plot coverage ratio FOR THIS SPECIFIC BUILDING TYPE
+        ⚠️ Include project type to get correct zone values!
+
         STEP 2:
         Tool: search_regulations
-        Input: "GFZ"
-        Purpose: Find floor area ratio
-        
+        Input: "GFZ {query.project_type}"
+        Purpose: Find floor area ratio FOR THIS SPECIFIC BUILDING TYPE
+
         STEP 3:
         Tool: search_regulations
-        Input: "HBA"
-        Purpose: Find building height values
+        Input: "building height {query.project_type}" OR "Geschosszahl {query.project_type}"
+        Purpose: Find height restrictions FOR THIS SPECIFIC BUILDING TYPE
 
         STEP 4:
+        Tool: search_regulations
+        Input: "{query.project_type} zoning Stuttgart"
+        Purpose: Identify which zone type applies (WA/MI/GE)
+
+        STEP 5:
         Tool: get_context
-        Input: [Plan name from Step 1]
-        Purpose: Get additional regulatory details
+        Input: "{query.project_type} Stuttgart regulations"
+        Purpose: Get additional regulatory context
 
         **CRITICAL FALLBACK (ONLY IF ALL SEARCHES ABOVE RETURN NOTHING):**
         If, after all searches, you still lack specific GRZ, GFZ, or HBA values:
@@ -774,6 +781,28 @@ Based on {plans[0].name}:
         - GFZ values: "GFZ 1.2" or "Geschossflächenzahl: 1,2"
         - EFH values: "EFH 261.50" (floor elevation)
         - Zoning: "WA" (Wohngebiet), "MI" (Mischgebiet), "GE" (Gewerbegebiet)
+
+        **VALIDATION - CRITICAL CHECK:**
+        Before finalizing your findings, verify:
+
+        ✅ Does the zone type match the project type?
+        - Single family house → Should be WA (Wohngebiet)
+        - Mixed-use → Should be MI (Mischgebiet)
+        - Commercial → Should be GE (Gewerbegebiet)
+        - If mismatch: Flag this issue!
+
+        ✅ Are GRZ/GFZ values in expected range for project type?
+        - Residential (WA): GRZ 0.3-0.6, GFZ 1.0-1.8
+        - Mixed (MI): GRZ 0.4-0.6, GFZ 1.2-2.0
+        - Commercial (GE): GRZ 0.6-0.8, GFZ 2.0-3.0
+        - If outside range: State "Values seem unusual, recommend verification"
+
+        ✅ Do all sources mention the same building type?
+        - If you found "GRZ 0.8" from a commercial zone document but query is residential → REJECT IT
+        - Only use values from documents that match {query.project_type}
+
+        **IF VALUES DON'T MATCH PROJECT TYPE:**
+        State: "Found values but they appear to be for [different building type]. Recommend consulting building department for {query.project_type}-specific values."
 
         **FORMATTING RULES:**
         ✅ GOOD: "GRZ: 0.4 (Source: stgt-286-2-bebauungsplan, Page 1)"
