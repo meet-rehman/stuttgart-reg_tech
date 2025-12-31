@@ -487,58 +487,80 @@ Based on {plans[0].name}:
 
     def classify_query_type(self, query: RegulationQuery) -> str:
         """
-        Classify query into types:
-        - 'site_specific': Requires consultation report (plot/building analysis)
-        - 'definition': Simple definition/explanation
-        - 'process': Administrative process question
-        - 'general': General information
+        Classify query into types with improved keyword matching
         """
         query_lower = query.query.lower()
         
-        # Site-specific indicators
+        # PRIORITY 1: Check for explicit plot/building indicators
         site_keywords = [
-            'build', 'plot', 'grundstück', 'flurstück', 
-            'can i', 'möchte bauen', 'planning to build',
-            'development', 'projekt', 'single family',
-            'einfamilienhaus', 'wohngebäude', 'storeys',
-            'geschosse', 'height', 'höhe', 'area', 'fläche',
-            'permit for', 'genehmigung für'
+            'i want to build', 'i am planning', 'i\'m planning',
+            'build a house', 'build a building', 'construct',
+            'storeys', 'stories', 'geschosse', 'meters high',
+            'm high', 'total area', 'floor area', 'plot',
+            'grundstück', 'flurstück', 'parzelle',
+            'single family house', 'einfamilienhaus',
+            'residential building', 'wohngebäude',
+            'development project', 'entwicklungsprojekt'
         ]
         
-        # Definition indicators
+        # PRIORITY 2: Check for definition questions
         definition_keywords = [
-            'what is', 'was ist', 'define', 'definition',
-            'bedeutung', 'explain', 'erklären', 'difference between',
-            'unterschied zwischen', 'meaning of'
+            'what is', 'was ist', 'what does', 'was bedeutet',
+            'define', 'definition', 'bedeutung',
+            'explain', 'erklären', 'erklärung',
+            'difference between', 'unterschied zwischen',
+            'meaning of', 'what are', 'was sind'
         ]
         
-        # Process indicators
+        # PRIORITY 3: Check for process questions
         process_keywords = [
-            'how to', 'wie kann ich', 'steps', 'schritte',
-            'process', 'verfahren', 'register', 'anmelden',
-            'apply', 'beantragen', 'submit', 'einreichen',
-            'procedure', 'ablauf'
+            'how to', 'wie kann ich', 'how do i', 'wie mache ich',
+            'what steps', 'welche schritte', 'procedure', 'verfahren',
+            'process for', 'ablauf', 'apply for', 'beantragen',
+            'register', 'anmelden', 'submit', 'einreichen',
+            'application', 'antrag'
         ]
         
-        # General information indicators
+        # PRIORITY 4: Check for general information
         general_keywords = [
-            'tell me about', 'erzähl mir über',
-            'overview', 'überblick', 'history', 'geschichte',
-            'climate', 'klima', 'statistics', 'statistik'
+            'tell me about', 'erzähl mir über', 'erzähle mir',
+            'structure of', 'struktur von', 'organization of',
+            'overview of', 'überblick über',
+            'history of', 'geschichte von',
+            'information about', 'informationen über',
+            'what authorities', 'welche behörden'
         ]
         
-        # Check query type (order matters - more specific first)
-        if query.plot_number or any(kw in query_lower for kw in site_keywords):
+        # Classification logic - ORDER MATTERS (most specific first)
+        
+        # Check if it has plot number (always site-specific)
+        if query.plot_number:
             return 'site_specific'
-        elif any(kw in query_lower for kw in definition_keywords):
-            return 'definition'
-        elif any(kw in query_lower for kw in process_keywords):
+        
+        # Check for definition patterns (high priority)
+        if any(kw in query_lower for kw in definition_keywords):
+            # But exclude if it's actually asking to build something
+            if not any(kw in query_lower for kw in ['i want', 'i am planning', 'i\'m planning', 'permit for']):
+                return 'definition'
+        
+        # Check for process patterns
+        if any(kw in query_lower for kw in process_keywords):
             return 'process'
-        elif any(kw in query_lower for kw in general_keywords):
+        
+        # Check for general information patterns
+        if any(kw in query_lower for kw in general_keywords):
             return 'general'
-        else:
-            # Default: if unclear, treat as site-specific to be safe
+        
+        # Check for site-specific patterns (last, as it's most common)
+        if any(kw in query_lower for kw in site_keywords):
             return 'site_specific'
+        
+        # Default: if unclear and short query, likely definition/general
+        if len(query_lower.split()) <= 8:
+            return 'general'
+        
+        # Otherwise treat as site-specific (safe default for building queries)
+        return 'site_specific'
 
     # ========================================================================
     # CORE EXECUTION METHOD (Must be indented inside the class)
@@ -572,6 +594,16 @@ Based on {plans[0].name}:
         query_type = self.classify_query_type(query)
         print(f"🔍 Query Type: {query_type.upper()}")
         
+        # ADD THIS DEBUG INFO:
+        print(f"🔍 Query Text: '{query.query}'")
+        print(f"🔍 Keywords detected:")
+        if 'what is' in query.query.lower() or 'was ist' in query.query.lower():
+            print("   - Definition keyword found")
+        if 'how to' in query.query.lower() or 'wie' in query.query.lower():
+            print("   - Process keyword found")
+        if 'structure' in query.query.lower() or 'overview' in query.query.lower():
+            print("   - General information keyword found")
+        print("-"*70)
         # =====================================================================
         # ROUTE BASED ON QUERY TYPE
         # =====================================================================
@@ -1168,7 +1200,12 @@ Based on {plans[0].name}:
     def _handle_definition_query(self, query: RegulationQuery, start_time: float) -> Dict[str, Any]:
         """Handle simple definition/explanation queries"""
         
-        print("📚 DEFINITION MODE: Using Document Specialist only")
+        print("="*70)
+        print("📚 DEFINITION MODE ACTIVATED")
+        print("="*70)
+        print(f"Query: {query.query}")
+        print("Using Document Specialist ONLY (no full report)")
+        print("-"*70)
         
         # Simple task for Document Specialist
         definition_task = Task(
@@ -1236,8 +1273,14 @@ Based on {plans[0].name}:
     def _handle_process_query(self, query: RegulationQuery, start_time: float) -> Dict[str, Any]:
         """Handle administrative process questions"""
         
-        print("📋 PROCESS MODE: Using Document Specialist for procedure guidance")
-        
+        # ADD THIS BLOCK:
+        print("="*70)
+        print("📋 PROCESS MODE ACTIVATED")
+        print("="*70)
+        print(f"Query: {query.query}")
+        print("Using Document Specialist for step-by-step guidance (no full report)")
+        print("-"*70)   
+
         # Research process
         process_task = Task(
             description=f"""Find information about this administrative process:
@@ -1309,8 +1352,14 @@ Based on {plans[0].name}:
     def _handle_general_query(self, query: RegulationQuery, start_time: float) -> Dict[str, Any]:
         """Handle general information queries"""
         
-        print("ℹ️ GENERAL MODE: Using Document Specialist for information")
-        
+        # ADD THIS BLOCK:
+        print("="*70)
+        print("ℹ️  GENERAL INFORMATION MODE ACTIVATED")
+        print("="*70)
+        print(f"Query: {query.query}")
+        print("Using Document Specialist for information overview (no full report)")
+        print("-"*70)     
+           
         general_task = Task(
             description=f"""Provide information about:
             "{query.query}"
