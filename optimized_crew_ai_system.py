@@ -953,9 +953,28 @@ Based on {plans[0].name}:
         [For each value, briefly explain what it means for this project]
 
         ## DEVELOPMENT POTENTIAL
-        [Calculate buildable areas using the GRZ/GFZ values found]
-        [Describe a realistic development scenario]
+        **CRITICAL: If plot size is mentioned in query, do actual calculations:**
 
+        Example for 250m² plot with GRZ 0.5, GFZ 1.8:
+        - Maximum ground coverage: 250m² × 0.5 = 125m²
+        - Maximum total floor area: 250m² × 1.8 = 450m²
+
+        If plot size is NOT mentioned, use typical Stuttgart plot sizes:
+        - Residential: 800-1000m²
+        - Mixed-use: 400-600m²
+        - Commercial: 500-800m²
+
+        **REALISTIC DEVELOPMENT SCENARIO:**
+
+        After calculating, describe a realistic building:
+        - Number of floors
+        - Use per floor (e.g., ground floor = shops, upper floors = apartments)
+        - Total built area
+        - Example: "3-storey building: ground floor 125m² (retail), 2 upper floors 162m² each (apartments), total 450m²"
+
+        Be specific to the {query.project_type} and use the calculated areas.
+
+        
         ## OPPORTUNITIES & CONSTRAINTS
         [Based on actual findings, what's possible and what's restricted?]
 
